@@ -12,7 +12,7 @@ class Controller:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.view = View(self, self.root)
 
-        self.current_sessions = {}
+        self.current_clients = {}
 
 
     def poll_queue(self) -> None:
@@ -26,15 +26,23 @@ class Controller:
                 pass
 
             elif p_type == "update":
-                self.current_sessions = p_data.get("sessions", {})
+                self.current_clients = p_data.get("clients", {})
 
-                if self.current_sessions is not None and self.view.root.winfo_exists() and self.view.root.winfo_viewable():
-                    self.view.update_sessions(self.current_sessions)
+                if self.current_clients is not None and self.view.root.winfo_exists() and self.view.root.winfo_viewable():
+                    self.view.update_clients(self.current_clients)
 
             elif p_type == "error":
                 print(f"Server Error: {packet.get('message')}")
 
         self.root.after(100, self.poll_queue)
+
+
+    def shutdown_user_computer(self, ip, port):
+        self.model.shutdown_user_computer(ip, port)
+
+
+    def powershell_command(self, ip, port):
+        self.model.powershell_command(ip, port)
 
 
     def start(self):

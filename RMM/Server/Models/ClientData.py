@@ -4,6 +4,11 @@ class ClientData:
         self._ip_address = ip_address
         self._port = port
 
+    def to_dict(self):
+        return {
+            "ip_address": self._ip_address,
+        }
+
 
     @property
     def conn(self):

@@ -11,7 +11,7 @@ class View:
         self.window_width = 500
         self.window_height = 700
 
-        self.sessions_frame = None
+        self.clients_frame = None
 
         self.root.withdraw()
 
@@ -33,85 +33,51 @@ class View:
         container = tk.Frame(self.root, bg="#BFDCEB", padx=10, pady=5)
         container.pack(fill="both", expand=True, padx=20, pady=(0, 10))
 
-        self.sessions_frame = tk.Frame(container, bg="#BFDCEB")
-        self.sessions_frame.pack(fill="both", expand=True)
+        self.clients_frame = tk.Frame(container, bg="#BFDCEB")
+        self.clients_frame.pack(fill="both", expand=True)
 
 
-    def update_sessions(self, sessions: dict) -> None:
-        if not self.sessions_frame or not self.root.winfo_exists():
+    def update_clients(self, clients: dict) -> None:
+        if not self.clients_frame or not self.root.winfo_exists():
             return
 
         try:
-            for widget in list(self.sessions_frame.winfo_children()):
+            for widget in list(self.clients_frame.winfo_children()):
                 if widget.winfo_exists():
                     widget.destroy()
 
-            for s_id, s_data in sessions.items():
-                # sessions{ "1": {"session_id": 1, "players": {...}, "state": "active"}, ... }
-                session_id = s_data.get("session_id", s_id)
-                player_count = len(s_data.get("players", {}))
-                state = s_data.get("state", "inactive")
-                btn_state = "normal"
-                status_text = None
-                status_color = None
-                btn_text = None
-                btn_bg = None
-                btn_active = None
-                btn_command = None
+            for c_port, c_data in clients.items():
+                client_ip = c_data.get("ip_address", "N/A")
 
-                if state == "active":
-                    status_text = "Active"
-                    status_color = "#28a745"
 
-                    btn_text = "Stop"
-                    btn_bg = "#FF5F5F"
-                    btn_active = "#E14B4B"
-                    btn_command = lambda sid=session_id: self.controller.pause_session(sid)
-
-                elif state == "inactive":
-                    status_text = "Inactive"
-                    status_color = "#9e263a"
-
-                    btn_text = "Inactive"
-                    btn_state = "disabled"
-                    btn_bg = "#FF5F5F"
-                    btn_command = lambda sid=session_id: self.controller.pause_session(sid)
-
-                row_frame = tk.Frame(self.sessions_frame, bg="#F5F9FC", pady=3)
+                row_frame = tk.Frame(self.clients_frame, bg="#F5F9FC", pady=3)
                 row_frame.pack(fill="x", padx=5, pady=5)
 
-                tk.Label(row_frame, text=f"ID: {session_id}", font=("Arial", 11, "bold"),
+                tk.Label(row_frame, text=f"IP: {client_ip}", font=("Arial", 11, "bold"),
                          bg="#F5F9FC", fg="#243B4A", width=10, anchor="w").pack(side="left", padx=3)
-
-                tk.Label(row_frame, text=f"Players: {player_count}/2", font=("Arial", 10),
-                         bg="#F5F9FC", fg="#555", width=12).pack(side="left", padx=3)
-
-                tk.Label(row_frame, text=status_text, font=("Arial", 10, "italic"),
-                         bg="#F5F9FC", fg=status_color, width=10).pack(side="left", padx=3)
 
                 btn_frame = tk.Frame(row_frame, bg="#F5F9FC")
                 btn_frame.pack(side="right")
 
                 tk.Button(
                     btn_frame,
-                    text=btn_text,
-                    bg=btn_bg,
-                    state=btn_state,
+                    text="Turn of",
+                    bg="#4CAF50",
                     fg="white",
-                    activebackground=btn_active,
+                    activebackground="#45a049",
                     width=8,
                     font=("Arial", 9, "bold"),
-                    command=btn_command
+                    command=lambda ip=client_ip, port=c_port:  self.controller.shutdown_user_computer(ip, port)
                 ).pack(side="right", padx=3)
 
                 tk.Button(
                     btn_frame,
-                    text="Details",
+                    text="Powershell",
                     bg="#D0E4F0",
                     activebackground="#BFDCEB",
                     width=8,
                     font=("Arial", 9),
-                    command=lambda sid=session_id: self.controller.show_details(sid)
+                    command= lambda ip=client_ip, port=c_port: self.controller.powershell_command(ip, port)
                 ).pack(side="right", padx=3)
 
         except tk.TclError:
