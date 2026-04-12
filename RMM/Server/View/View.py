@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 
 
 class View:
@@ -77,11 +78,48 @@ class View:
                     activebackground="#BFDCEB",
                     width=8,
                     font=("Arial", 9),
-                    command= lambda ip=client_ip, port=c_port: self.controller.powershell_command(ip, port)
+                    command= lambda ip=client_ip, port=c_port: self.open_powershell_window(ip, port)
                 ).pack(side="right", padx=3)
 
         except tk.TclError:
             print("View: Update attempt failed")
+
+
+    def open_powershell_window(self, ip: str, port: int) -> None:
+        ps_window = tk.Toplevel(self.root)
+        ps_window.title(f"PowerShell - {ip}")
+        ps_window.geometry("400x150")
+        ps_window.configure(bg="#F5F9FC")
+        ps_window.resizable(False, False)
+        ps_window.grab_set()
+
+        self.center(ps_window, 400, 150)
+
+        tk.Label(
+            ps_window, text=f"Enter command for {ip}:",
+            font=("Arial", 10), bg="#F5F9FC", fg="#243B4A"
+        ).pack(pady=(15, 5))
+
+        entry = tk.Entry(ps_window, font=("Consolas", 11), width=40)
+        entry.pack(pady=5, padx=20)
+        entry.focus_set()
+
+        def send_command():
+            command = entry.get()
+            if command.strip():
+                self.controller.powershell_command(ip, port, command)
+                ps_window.destroy()
+            else:
+                messagebox.showwarning("Warning", "Command cannot be empty")
+
+        btn_ok = tk.Button(
+            ps_window, text="Execute", width=10,
+            bg="#4CAF50", fg="white", font=("Arial", 9, "bold"),
+            command=send_command
+        )
+        btn_ok.pack(pady=10)
+
+        ps_window.bind('<Return>', lambda event: send_command())
 
 
     @staticmethod

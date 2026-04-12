@@ -41,8 +41,8 @@ class Controller:
         self.model.shutdown_user_computer(ip, port)
 
 
-    def powershell_command(self, ip, port):
-        self.model.powershell_command(ip, port)
+    def powershell_command(self, ip, port, command):
+        self.model.powershell_command(ip, port, command)
 
 
     def start(self):
