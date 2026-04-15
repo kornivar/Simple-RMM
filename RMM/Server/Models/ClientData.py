@@ -3,10 +3,13 @@ class ClientData:
         self._conn = conn
         self._ip_address = ip_address
         self._port = port
+        self.online_status = False
+        self.file_list = []
 
     def to_dict(self):
         return {
             "ip_address": self._ip_address,
+            "online_status": self.online_status,
         }
 
 

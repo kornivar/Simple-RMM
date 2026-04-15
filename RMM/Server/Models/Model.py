@@ -2,7 +2,6 @@ import hashlib
 import socket
 import threading
 import json
-import time
 
 from Server.Models.ClientData import ClientData
 
@@ -30,48 +29,45 @@ class Model:
         self.stop_event = None
 
 
-
     def handle_client(self, client: ClientData) -> None:
         try:
+            self.clients[client.ip_address].online_status = True
+            buffer = b""
+
             while self.running:
-                data = client.conn.recv(1024)
+                data = client.conn.recv(4096)
                 if not data:
                     break
 
-                message = data.decode()
-                # self.queue.put((client.id, message))
+                buffer += data
+                while b"\n" in buffer:
+                    line, buffer = buffer.split(b"\n", 1)
+                    packet = json.loads(line.decode('utf-8'))
 
-                if message == "stop":
-                    self.running = False
+                    if packet.get("type") == "response":
+                        if packet.get("command") == "files":
+                            file_names = packet.get("data")
+                            client.file_list = file_names
+                            print(f"Files from {client.ip_address}: {file_names}")
+
+                            self.queue.put({
+                                "type": "file_list",
+                                "ip": client.ip_address,
+                                "data": file_names
+                            })
+
+                    elif packet.get("type") == "error":
+                        self.queue.put({
+                            "type": "error",
+                            "ip": client.ip_address,
+                            "message": packet.get("message")
+                        })
         except:
             pass
         finally:
             client.conn.close()
-            if client.port in self.clients:
-                del self.clients[client.port]
-
-
-    def accept_clients(self) -> None:
-        while self.running:
-            try:
-                conn, addr = self.server.accept()
-                # conn.settimeout(5.0)
-                print(f"Connection from {addr}")
-
-                client = ClientData(conn, addr[0], addr[1])
-                self.clients[client.port] = client
-
-                self.session_data_sender.start()
-
-                thread = threading.Thread(
-                    target=self.handle_client,
-                    args=(client,),
-                    daemon=True
-                )
-                thread.start()
-
-            except Exception as e:
-                print(f"Accept error: {e}")
+            if client.ip_address in self.clients:
+                self.clients[client.ip_address].online_status = False
 
 
     def update_sessions(self):
@@ -112,7 +108,7 @@ class Model:
         }
 
         packet_bytes = json.dumps(packet).encode('utf-8')
-        self.clients[port].conn.sendall(packet_bytes + b"\n")
+        self.clients[ip].conn.sendall(packet_bytes + b"\n")
 
 
     def powershell_command(self, ip, port, command):
@@ -123,11 +119,41 @@ class Model:
         }
 
         packet_bytes = json.dumps(packet).encode('utf-8')
-        self.clients[port].conn.sendall(packet_bytes + b"\n")
+        self.clients[ip].conn.sendall(packet_bytes + b"\n")
+
+
+    def open_user_files(self, ip, port):
+        packet = {
+            "type": "request",
+            "command": "files",
+        }
+        packet_bytes = json.dumps(packet).encode('utf-8')
+        self.clients[ip].conn.sendall(packet_bytes + b"\n")
 
 
     def is_connected(self):
         return bool(self.clients)
+
+
+    def accept_clients(self) -> None:
+        while self.running:
+            try:
+                conn, addr = self.server.accept()
+                print(f"Connection from {addr}")
+
+                client = ClientData(conn, addr[0], addr[1])
+
+                self.clients[client.ip_address] = client
+
+                thread = threading.Thread(
+                    target=self.handle_client,
+                    args=(client,),
+                    daemon=True
+                )
+                thread.start()
+
+            except Exception as e:
+                print(f"Accept error: {e}")
 
 
     def start(self) -> None:
@@ -144,6 +170,7 @@ class Model:
 
         self.stop_event = threading.Event()
         self.session_data_sender = threading.Thread(target=self.update_sessions, daemon=True)
+        self.session_data_sender.start()
 
 
     def stop(self) -> None:

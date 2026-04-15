@@ -13,6 +13,7 @@ class View:
         self.window_height = 700
 
         self.clients_frame = None
+        self.file_windows = {}
 
         self.root.withdraw()
 
@@ -49,6 +50,8 @@ class View:
 
             for c_port, c_data in clients.items():
                 client_ip = c_data.get("ip_address", "N/A")
+                client_online = "Online" if c_data.get("online_status", "N/A") else "Offline"
+                fg_color = "#4afa41" if client_online == "Online" else "#FF5F5F"
 
 
                 row_frame = tk.Frame(self.clients_frame, bg="#F5F9FC", pady=3)
@@ -57,15 +60,17 @@ class View:
                 tk.Label(row_frame, text=f"IP: {client_ip}", font=("Arial", 11, "bold"),
                          bg="#F5F9FC", fg="#243B4A", width=10, anchor="w").pack(side="left", padx=3)
 
+                tk.Label(row_frame, text=client_online, font=("Arial", 11, "bold"),
+                         bg="#F5F9FC", fg=fg_color, width=10, anchor="w").pack(side="left", padx=3)
+
                 btn_frame = tk.Frame(row_frame, bg="#F5F9FC")
                 btn_frame.pack(side="right")
 
                 tk.Button(
                     btn_frame,
                     text="Turn of",
-                    bg="#4CAF50",
+                    bg="#FF5F5F",
                     fg="white",
-                    activebackground="#45a049",
                     width=8,
                     font=("Arial", 9, "bold"),
                     command=lambda ip=client_ip, port=c_port:  self.controller.shutdown_user_computer(ip, port)
@@ -74,11 +79,21 @@ class View:
                 tk.Button(
                     btn_frame,
                     text="Powershell",
-                    bg="#D0E4F0",
-                    activebackground="#BFDCEB",
+                    bg="#4245fa",
+                    fg="white",
                     width=8,
                     font=("Arial", 9),
                     command= lambda ip=client_ip, port=c_port: self.open_powershell_window(ip, port)
+                ).pack(side="right", padx=3)
+
+                tk.Button(
+                    btn_frame,
+                    text="Desktop",
+                    bg="#FFFFFF",
+                    fg="black",
+                    width=8,
+                    font=("Arial", 9, "bold"),
+                    command=lambda ip=client_ip, port=c_port: self.open_desktop_files_window(ip, port)
                 ).pack(side="right", padx=3)
 
         except tk.TclError:
@@ -120,6 +135,63 @@ class View:
         btn_ok.pack(pady=10)
 
         ps_window.bind('<Return>', lambda event: send_command())
+
+
+    def open_desktop_files_window(self, ip, port):
+        if ip in self.file_windows and self.file_windows[ip].winfo_exists():
+            self.file_windows[ip].lift()
+            return
+
+        window = tk.Toplevel(self.root)
+        window.title(f"Desktop Files - {ip}")
+        window.geometry("400x500")
+        window.configure(bg="#F5F9FC")
+        self.center(window, 400, 500)
+
+        tk.Label(
+            window, text=f"Files on Desktop ({ip}):",
+            font=("Arial", 12, "bold"), bg="#F5F9FC", fg="#243B4A"
+        ).pack(pady=10)
+
+        frame = tk.Frame(window, bg="#F5F9FC")
+        frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        scrollbar = tk.Scrollbar(frame)
+        scrollbar.pack(side="right", fill="y")
+
+        listbox = tk.Listbox(
+            frame, font=("Consolas", 10),
+            yscrollcommand=scrollbar.set,
+            bg="white", fg="#243B4A",
+            borderwidth=0, highlightthickness=1
+        )
+        listbox.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=listbox.yview)
+
+        window.file_listbox = listbox
+        self.file_windows[ip] = window
+
+        listbox.insert("end", " Requesting files from agent...")
+
+        self.controller.open_user_files(ip, port)
+
+
+    def update_file_list(self, ip, files):
+        window = self.file_windows.get(ip)
+
+        if window and window.winfo_exists():
+            listbox = window.file_listbox
+            listbox.delete(0, "end")
+
+            if not files:
+                listbox.insert("end", " (Desktop is empty)")
+                return
+
+            for file in files:
+                prefix = "📁 " if "." not in file else "📄 "
+                listbox.insert("end", f" {prefix}{file}")
+        else:
+            print(f"Window for {ip} not found or closed")
 
 
     @staticmethod
