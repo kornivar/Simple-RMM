@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 
 
@@ -143,55 +144,64 @@ class View:
             return
 
         window = tk.Toplevel(self.root)
-        window.title(f"Desktop Files - {ip}")
-        window.geometry("400x500")
-        window.configure(bg="#F5F9FC")
-        self.center(window, 400, 500)
+        window.title(f"Explorer - {ip}")
+        window.geometry("500x400")
+        self.center(window, 500, 400)
 
-        tk.Label(
-            window, text=f"Files on Desktop ({ip}):",
-            font=("Arial", 12, "bold"), bg="#F5F9FC", fg="#243B4A"
-        ).pack(pady=10)
-
-        frame = tk.Frame(window, bg="#F5F9FC")
-        frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-        scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side="right", fill="y")
-
-        listbox = tk.Listbox(
-            frame, font=("Consolas", 10),
-            yscrollcommand=scrollbar.set,
-            bg="white", fg="#243B4A",
-            borderwidth=0, highlightthickness=1
-        )
-        listbox.pack(side="left", fill="both", expand=True)
-        scrollbar.config(command=listbox.yview)
-
-        window.file_listbox = listbox
+        window.current_path = ""
         self.file_windows[ip] = window
 
-        listbox.insert("end", " Requesting files from agent...")
+        top_frame = tk.Frame(window, bg="#F5F9FC")
+        top_frame.pack(fill="x", padx=5, pady=5)
+
+        tk.Button(top_frame, text="⬅ Back", command=lambda: self.go_back(ip, port)).pack(side="left")
+
+        tree = ttk.Treeview(window, show="tree")
+        tree.pack(fill="both", expand=True, padx=5, pady=5)
+        window.file_tree = tree
+
+        def on_double_click(event):
+            selected = tree.selection()
+            if not selected: return
+
+            item_text = tree.item(selected[0], "text")
+
+            if "📁" in item_text:
+                folder_name = item_text.replace("📁 ", "")
+                if window.current_path:
+                    window.current_path += f"/{folder_name}"
+                else:
+                    window.current_path = folder_name
+
+                self.controller.request_subfolder(ip, port, window.current_path)
+
+        tree.bind("<Double-1>", on_double_click)
 
         self.controller.open_user_files(ip, port)
 
 
-    def update_file_list(self, ip, files):
+    def go_back(self, ip, port):
         window = self.file_windows.get(ip)
+        if window and window.current_path:
+            parts = window.current_path.split("/")
+            parts.pop()
+            window.current_path = "/".join(parts)
 
+            path_to_req = window.current_path if window.current_path else ""
+            self.controller.request_subfolder(ip, port, path_to_req)
+
+
+    def update_file_list(self, ip, items):
+        window = self.file_windows.get(ip)
         if window and window.winfo_exists():
-            listbox = window.file_listbox
-            listbox.delete(0, "end")
+            tree = window.file_tree
+            for i in tree.get_children(): tree.delete(i)
 
-            if not files:
-                listbox.insert("end", " (Desktop is empty)")
-                return
+            items.sort(key=lambda x: not x['is_dir'])
 
-            for file in files:
-                prefix = "📁 " if "." not in file else "📄 "
-                listbox.insert("end", f" {prefix}{file}")
-        else:
-            print(f"Window for {ip} not found or closed")
+            for item in items:
+                icon = "📁 " if item['is_dir'] else "📄 "
+                tree.insert("", "end", text=f"{icon}{item['name']}")
 
 
     @staticmethod

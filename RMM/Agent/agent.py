@@ -102,32 +102,28 @@ def receive(client) -> None:
 
                     elif p_type == "request":
                         if packet.get("command") == "files":
-                            print("Collecting desktop files...")
+                            rel_path = packet.get("path", "")
+                            base_desktop = get_desktop_path()
 
-                            desktop_path = get_desktop_path()
+                            target_path = os.path.normpath(os.path.join(base_desktop, rel_path))
+
+                            if not target_path.startswith(base_desktop):
+                                target_path = base_desktop
 
                             try:
-                                if os.path.exists(desktop_path):
-                                    files_list = os.listdir(desktop_path)
-                                    print(f"Found {len(files_list)} items")
+                                items = []
+                                for name in os.listdir(target_path):
+                                    full = os.path.join(target_path, name)
+                                    items.append({
+                                        "name": name,
+                                        "is_dir": os.path.isdir(full)
+                                    })
 
-                                    response = {
-                                        "type": "response",
-                                        "command": "files",
-                                        "data": files_list,
-                                    }
-                                else:
-                                    raise Exception(f"Path not found: {desktop_path}")
-
+                                response = {"type": "response", "command": "files", "data": items}
                             except Exception as e:
-                                print(f"Agent error: {e}")
-                                response = {
-                                    "type": "error",
-                                    "message": str(e)
-                                }
+                                response = {"type": "error", "message": str(e)}
 
-                            response_bytes = (json.dumps(response) + "\n").encode("utf-8")
-                            client.sendall(response_bytes)
+                            client.sendall((json.dumps(response) + "\n").encode("utf-8"))
 
 
             except socket.timeout:

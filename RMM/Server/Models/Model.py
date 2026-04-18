@@ -131,6 +131,19 @@ class Model:
         self.clients[ip].conn.sendall(packet_bytes + b"\n")
 
 
+    def request_subfolder(self, ip, port, path):
+        packet = {
+            "type": "request",
+            "command": "files",
+            "path": path
+        }
+        try:
+            packet_bytes = json.dumps(packet).encode('utf-8')
+            self.clients[ip].conn.sendall(packet_bytes + b"\n")
+        except Exception as e:
+            print(f"Error sending subfolder request: {e}")
+
+
     def is_connected(self):
         return bool(self.clients)
 

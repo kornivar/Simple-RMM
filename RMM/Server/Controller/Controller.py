@@ -45,8 +45,13 @@ class Controller:
     def powershell_command(self, ip, port, command):
         self.model.powershell_command(ip, port, command)
 
+
     def open_user_files(self, ip, port):
         self.model.open_user_files(ip, port)
+
+
+    def request_subfolder(self, ip, port, path):
+        self.model.request_subfolder(ip, port, path)
 
 
     def start(self):
