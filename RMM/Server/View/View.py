@@ -1,6 +1,9 @@
+import os
+import base64
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import filedialog
 
 
 class View:
@@ -62,7 +65,7 @@ class View:
                          bg="#F5F9FC", fg="#243B4A", width=10, anchor="w").pack(side="left", padx=3)
 
                 tk.Label(row_frame, text=client_online, font=("Arial", 11, "bold"),
-                         bg="#F5F9FC", fg=fg_color, width=10, anchor="w").pack(side="left", padx=3)
+                         bg="#F5F9FC", fg=fg_color, width=7, anchor="w").pack(side="left", padx=3)
 
                 btn_frame = tk.Frame(row_frame, bg="#F5F9FC")
                 btn_frame.pack(side="right")
@@ -72,7 +75,7 @@ class View:
                     text="Turn of",
                     bg="#FF5F5F",
                     fg="white",
-                    width=8,
+                    width=6,
                     font=("Arial", 9, "bold"),
                     command=lambda ip=client_ip, port=c_port:  self.controller.shutdown_user_computer(ip, port)
                 ).pack(side="right", padx=3)
@@ -89,10 +92,20 @@ class View:
 
                 tk.Button(
                     btn_frame,
+                    text="Upload",
+                    bg="#FFC107",
+                    fg="black",
+                    width=6,
+                    font=("Arial", 9, "bold"),
+                    command=lambda ip=client_ip, port=c_port: self.select_and_upload_file(ip, port)
+                ).pack(side="right", padx=3)
+
+                tk.Button(
+                    btn_frame,
                     text="Desktop",
                     bg="#FFFFFF",
                     fg="black",
-                    width=8,
+                    width=6,
                     font=("Arial", 9, "bold"),
                     command=lambda ip=client_ip, port=c_port: self.open_desktop_files_window(ip, port)
                 ).pack(side="right", padx=3)
@@ -154,7 +167,7 @@ class View:
         top_frame = tk.Frame(window, bg="#F5F9FC")
         top_frame.pack(fill="x", padx=5, pady=5)
 
-        tk.Button(top_frame, text="⬅ Back", command=lambda: self.go_back(ip, port)).pack(side="left")
+        tk.Button(top_frame, text="<= Back", command=lambda: self.go_back(ip, port)).pack(side="left")
 
         tree = ttk.Treeview(window, show="tree")
         tree.pack(fill="both", expand=True, padx=5, pady=5)
@@ -202,6 +215,23 @@ class View:
             for item in items:
                 icon = "📁 " if item['is_dir'] else "📄 "
                 tree.insert("", "end", text=f"{icon}{item['name']}")
+
+
+    def select_and_upload_file(self, ip, port):
+        file_path = filedialog.askopenfilename(title="Select file to upload")
+
+        if not file_path:
+            return
+
+        try:
+            file_name = os.path.basename(file_path)
+
+            self.controller.upload_file(ip, file_path)
+
+            messagebox.showinfo("Success", f"File '{file_name}' sent to agent.")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to read file: {e}")
 
 
     @staticmethod

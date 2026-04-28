@@ -54,6 +54,10 @@ class Controller:
         self.model.request_subfolder(ip, port, path)
 
 
+    def upload_file(self, ip, file_path):
+        self.model.send_file_to_client(ip, file_path)
+
+
     def start(self):
         self.model.start()
         self.view.start()

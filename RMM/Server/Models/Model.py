@@ -1,7 +1,9 @@
 import hashlib
+import os
 import socket
 import threading
 import json
+import time
 
 from Server.Models.ClientData import ClientData
 
@@ -142,6 +144,31 @@ class Model:
             self.clients[ip].conn.sendall(packet_bytes + b"\n")
         except Exception as e:
             print(f"Error sending subfolder request: {e}")
+
+
+    def send_file_to_client(self, ip, file_path):
+        size = os.path.getsize(file_path)
+        filename = os.path.basename(file_path)
+
+        packet = {
+            "type": "command",
+            "command": "upload_start",
+            "file_name": filename,
+            "file_size": size
+        }
+
+        conn = self.clients[ip].conn
+        conn.sendall((json.dumps(packet) + "\n").encode('utf-8'))
+
+        time.sleep(0.1)
+
+        with open(file_path, "rb") as f:
+            while True:
+                chunk = f.read(8192)
+                if not chunk:
+                    break
+                conn.sendall(chunk)
+        print(f"File {filename} sent successfully.")
 
 
     def is_connected(self):

